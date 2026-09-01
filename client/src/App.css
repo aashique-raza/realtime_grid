@@ -55,6 +55,14 @@
   color: #7c8db0;
 }
 
+.notice {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.3px;
+  color: #ffb020;
+  animation: pop 0.3s ease;
+}
+
 /* ---------- board (fills the rest of the screen) ---------- */
 .board-wrap {
   flex: 1;
@@ -124,6 +132,10 @@
     0 0 14px color-mix(in srgb, var(--tile-color) 22%, transparent);
   color: color-mix(in srgb, var(--tile-color) 30%, #ffffff);
   animation: pop 0.3s ease;
+}
+
+.tile.claimed {
+  cursor: default;
 }
 
 .tile.claimed:hover {

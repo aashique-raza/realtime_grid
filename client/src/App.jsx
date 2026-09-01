@@ -23,6 +23,7 @@ function App() {
   const [selected, setSelected] = useState(null)
   const [name, setName] = useState('')
   const [color, setColor] = useState(COLORS[0])
+  const [notice, setNotice] = useState('')
 
   useEffect(() => {
     socket.on('initialGridState', (state) => {
@@ -33,14 +34,29 @@ function App() {
       setGrid((prev) => ({ ...prev, [blockId]: { name, color } }))
     })
 
+    //  someone else grabbed this tile a split second before us - the
+    //  server rejected our claim, so close the modal and say why
+    socket.on('claimRejected', ({ blockId, owner }) => {
+      setSelected((current) => (current === blockId ? null : current))
+      setNotice(`Too slow! ${owner} just claimed that tile.`)
+    })
+
     // ask the server for the current grid once listeners are attached
     socket.emit('getGrid')
 
     return () => {
       socket.off('initialGridState')
       socket.off('blockUpdated')
+      socket.off('claimRejected')
     }
   }, [])
+
+  // auto-clear the notice banner after a few seconds
+  useEffect(() => {
+    if (!notice) return
+    const timer = setTimeout(() => setNotice(''), 3000)
+    return () => clearTimeout(timer)
+  }, [notice])
 
   const claimed = Object.keys(grid).length
   const total = SIZE * SIZE
@@ -65,6 +81,7 @@ function App() {
           <div className="fill" style={{ width: `${(claimed / total) * 100}%` }} />
         </div>
         <p className="count">{claimed} / {total} claimed</p>
+        {notice && <p className="notice">{notice}</p>}
       </header>
 
       <div className="board-wrap">
@@ -79,7 +96,8 @@ function App() {
                   className={cell ? 'tile claimed' : 'tile'}
                   style={cell ? { '--tile-color': cell.color } : undefined}
                   title={cell ? `Claimed by ${cell.name}` : `Tile ${id}`}
-                  onClick={() => setSelected(id)}
+                  // already-claimed tiles are locked - only unclaimed ones open the modal
+                  onClick={() => { if (!cell) setSelected(id) }}
                 >
                   {cell ? (
                     <span className="who">{cell.name}</span>

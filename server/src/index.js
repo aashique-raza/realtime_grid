@@ -41,6 +41,16 @@ io.on("connection", (socket) => {
       console.error("Invalid data received:", data);
       return;
     }
+
+    //  block already taken - reject instead of letting it get overwritten.
+    //  server is the source of truth so this is also what settles two
+    //  people clicking the same empty tile at the same time (first one
+    //  to arrive here wins, the second sees it as already claimed)
+    if (gridState[blockId]) {
+      socket.emit("claimRejected", { blockId, owner: gridState[blockId].name });
+      return;
+    }
+
     gridState[blockId] = { name, color };
     io.emit("blockUpdated", { blockId, name, color });
   });
