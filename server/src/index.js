@@ -29,7 +29,7 @@ io.on("connection", (socket) => {
   //   send complet current state of the grid to the newly connected user
   socket.emit("initialGridState", gridState);
 
-  //  client can also ask for the current state (avoids a race on first mount)
+  
   socket.on("getGrid", () => {
     socket.emit("initialGridState", gridState);
   });
@@ -42,10 +42,7 @@ io.on("connection", (socket) => {
       return;
     }
 
-    //  block already taken - reject instead of letting it get overwritten.
-    //  server is the source of truth so this is also what settles two
-    //  people clicking the same empty tile at the same time (first one
-    //  to arrive here wins, the second sees it as already claimed)
+   
     if (gridState[blockId]) {
       socket.emit("claimRejected", { blockId, owner: gridState[blockId].name });
       return;
