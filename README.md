@@ -1,11 +1,11 @@
 # Realtime Grid Server
 
-Node.js Express server with Socket.IO for real-time grid updates.
+Node.js + Express backend with Socket.IO for the realtime grid app. It keeps track of the grid state and pushes updates to everyone connected the moment a tile gets claimed.
 
 ## Setup
 
 ### Prerequisites
-- Node.js 14+ 
+- Node.js 14+
 - npm or yarn
 
 ### Installation
@@ -25,7 +25,7 @@ NODE_ENV=development
 
 ### Running the Server
 
-**Development (with auto-reload):**
+**Development (auto-reload):**
 ```bash
 npm run dev
 ```
@@ -35,31 +35,31 @@ npm run dev
 npm start
 ```
 
-The server will start on `http://localhost:3000`
+Runs on `http://localhost:3000` by default.
 
 ## Features
 
-- Express.js REST API
-- Socket.IO for real-time communication
-- CORS enabled for client requests
-- Nodemon for development auto-reload
+- Express REST API
+- Socket.IO for realtime updates
+- CORS enabled so the client can talk to it
+- Nodemon for dev
 
 ## Dependencies
 
-- **express** - Web framework
-- **socket.io** - Real-time bidirectional communication
-- **cors** - Cross-origin resource sharing
+- **express** - web framework
+- **socket.io** - realtime, bidirectional communication
+- **cors** - so the frontend (different origin) can actually hit this server
 
 ## Dev Dependencies
 
-- **nodemon** - Auto-restart on file changes
+- **nodemon** - restarts the server automatically while developing
 
-## Design Decisions
+## Why I built it this way
 
-**Why Socket.IO** - needed instant, bidirectional updates (server → all clients the moment a tile is claimed). Socket.IO handles the WebSocket connection plus a polling fallback and reconnection out of the box, so it was simpler than hand-rolling a raw `ws` server for this scope.
+I went with Socket.IO instead of a plain `ws` server mainly because I didn't want to deal with reconnection logic and transport fallbacks myself. Socket.IO already handles that, and for a project this size that mattered more to me than saving one dependency.
 
-**Why in-memory state** - `gridState` is a plain object living in the server process. For the size of this assignment that's enough, and it keeps the write path a single synchronous line with no extra infra to set up. Trade-off: state resets if the server restarts/redeploys. A real product would move this to Redis (fast, and multiple server instances could share it) or a small DB table if claims needed to survive restarts.
+For the grid data, I just kept it as a plain object in memory (`gridState`) instead of setting up a database. It's simple and the write path is basically one line. Downside is obvious - if the server restarts, everything resets and all tiles go back to unclaimed. If this ever needed to survive restarts or run on multiple instances, I'd move it to Redis instead.
 
-**Conflict handling** - the server is the single source of truth. When a `claimGrid` event comes in, it's only accepted if the tile is still unclaimed; otherwise the server emits `claimRejected` back to that socket instead of overwriting the existing owner. Because Node processes these events one at a time, this also resolves the "two people click the same empty tile at once" race - whichever claim reaches the server first wins, the second is rejected. The client also disables clicking on tiles that are already claimed, but the server check is what actually enforces it (client-side is just UX, not trusted).
+The part I spent the most time on was actually conflicts - what happens if two people click the same tile at almost the same moment. The server is the only source of truth for ownership. When a `claimGrid` event comes in, it only goes through if that tile is still unclaimed - if someone already grabbed it, the server sends back a `claimRejected` event instead of just overwriting the existing owner. Since Node handles events one at a time anyway, whichever claim reaches the server first wins and the second one gets rejected. I also block clicks on already-claimed tiles on the frontend, but that's just for a smoother feel - the actual enforcement is server-side since the client can't be trusted.
 
-**What's not implemented** - cooldowns/area-control rules, a per-user leaderboard, and zoom/pan were left out to keep the scope focused on the core real-time + conflict-handling loop within the time available. The architecture (one `gridState` object + two socket events) would extend to a leaderboard easily (derive counts per name from `gridState`); zoom/pan would mainly be a CSS/viewport change on the `.board` grid.
+What I didn't get to: cooldowns, area control rules, a leaderboard, zoom/pan on the board. Mostly ran out of time and wanted the core realtime + conflict handling to actually be solid instead of spreading effort across every bonus item. A leaderboard would be a quick add later (just count tiles per name from `gridState`), zoom/pan would mainly be CSS work on the grid.
