@@ -17,7 +17,7 @@ function GiftIcon() {
     </svg>
   )
 }
-
+//  main app component
 function App() {
   const [grid, setGrid] = useState({})
   const [selected, setSelected] = useState(null)
